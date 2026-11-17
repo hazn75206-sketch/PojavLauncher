@@ -38,35 +38,15 @@ jobs:
           cd app_pojavlauncher/libs
           curl -fL -o ltw-release.aar https://github.com/PojavLauncherTeam/LTW/releases/latest/download/ltw-release.aar
 
-      - name: Get JRE 8
-        uses: dawidd6/action-download-artifact@v9
-        with:
-          workflow: build.yml
-          path: app_pojavlauncher/src/main/assets/components/jre
-          workflow_conclusion: success
-          repo: PojavLauncherTeam/android-openjdk-build-multiarch
-          branch: buildjre8
-          name: jre8-pojav
-
-      - name: Get JRE17
-        uses: dawidd6/action-download-artifact@v9
-        with:
-          workflow: build.yml
-          path: app_pojavlauncher/src/main/assets/components/jre-new
-          workflow_conclusion: success
-          repo: PojavLauncherTeam/android-openjdk-build-multiarch
-          branch: buildjre17-21
-          name: jre17-pojav
-
-      - name: Get JRE21
-        uses: dawidd6/action-download-artifact@v9
-        with:
-          workflow: build.yml
-          path: app_pojavlauncher/src/main/assets/components/jre-21
-          workflow_conclusion: success
-          repo: PojavLauncherTeam/android-openjdk-build-multiarch
-          branch: buildjre17-21
-          name: jre21-pojav
+      - name: Get JREs
+        run: |
+          curl -fL --retry 3 --retry-delay 2 -o /tmp/pojavlauncher-release.apk \
+            https://github.com/PojavLauncherTeam/PojavLauncher/releases/download/gladiolus/PojavLauncher.apk
+          mkdir -p /tmp/pojavlauncher-assets
+          unzip -q /tmp/pojavlauncher-release.apk 'assets/components/jre*' -d /tmp/pojavlauncher-assets
+          mkdir -p app_pojavlauncher/src/main/assets/components
+          cp -r /tmp/pojavlauncher-assets/assets/components/jre* app_pojavlauncher/src/main/assets/components/
+          ls -la app_pojavlauncher/src/main/assets/components/
 
       - uses: gradle/actions/setup-gradle@v4
         with:
@@ -100,9 +80,9 @@ jobs:
 
       - name: Build APK without runtime
         run: |
-          rm -r app_pojavlauncher/src/main/assets/components/jre
-          rm -r app_pojavlauncher/src/main/assets/components/jre-new
-          rm -r app_pojavlauncher/src/main/assets/components/jre-21
+          rm -rf app_pojavlauncher/src/main/assets/components/jre
+          rm -rf app_pojavlauncher/src/main/assets/components/jre-new
+          rm -rf app_pojavlauncher/src/main/assets/components/jre-21
           gradle :app_pojavlauncher:assembleDebug --parallel --max-workers=4 --build-cache
           mv app_pojavlauncher/build/outputs/apk/debug/app_pojavlauncher-debug.apk out/app-debug-noruntime.apk
 
