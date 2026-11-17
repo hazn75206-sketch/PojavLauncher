@@ -1,9 +1,11 @@
 package net.kdt.pojavlaunch.fragments;
 
-import static net.kdt.pojavlaunch.Tools.openPath;
 import static net.kdt.pojavlaunch.Tools.shareLog;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -12,6 +14,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 
 import com.kdt.mcgui.mcVersionSpinner;
@@ -21,15 +24,13 @@ import net.kdt.pojavlaunch.R;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.extra.ExtraConstants;
 import net.kdt.pojavlaunch.extra.ExtraCore;
-import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 import net.kdt.pojavlaunch.progresskeeper.ProgressKeeper;
-import net.kdt.pojavlaunch.value.launcherprofiles.LauncherProfiles;
-import net.kdt.pojavlaunch.value.launcherprofiles.MinecraftProfile;
-
-import java.io.File;
+import net.kdt.pojavlaunch.utils.GameDataPicker;
+import net.kdt.pojavlaunch.utils.GameDataUtils;
 
 public class MainMenuFragment extends Fragment {
     public static final String TAG = "MainMenuFragment";
+    private static final int REQUEST_STORAGE_PERMISSION = 0x54;
 
     private mcVersionSpinner mVersionSpinner;
 
@@ -44,7 +45,7 @@ public class MainMenuFragment extends Fragment {
         Button mCustomControlButton = view.findViewById(R.id.custom_control_button);
         Button mInstallJarButton = view.findViewById(R.id.install_jar_button);
         Button mShareLogsButton = view.findViewById(R.id.share_logs_button);
-        Button mOpenDirectoryButton = view.findViewById(R.id.open_files_button);
+        Button mDataFolderButton = view.findViewById(R.id.open_files_button);
 
         ImageButton mEditProfileButton = view.findViewById(R.id.edit_profile_button);
         Button mPlayButton = view.findViewById(R.id.play_button);
@@ -64,15 +65,7 @@ public class MainMenuFragment extends Fragment {
 
         mShareLogsButton.setOnClickListener((v) -> shareLog(requireContext()));
 
-        mOpenDirectoryButton.setOnClickListener((v)-> {
-            Tools.switchDemo(Tools.isDemoProfile(v.getContext())); // avoid switching accounts being able to access
-            if(Tools.isDemoProfile(v.getContext())){
-                Toast.makeText(v.getContext(), R.string.toast_not_available_demo, Toast.LENGTH_LONG).show();
-                return;
-            }
-
-            openPath(v.getContext(), getCurrentProfileDirectory(), false);
-        });
+        mDataFolderButton.setOnClickListener(v -> openGameDataPicker());
 
 
         mNewsButton.setOnLongClickListener((v)->{
@@ -81,13 +74,35 @@ public class MainMenuFragment extends Fragment {
         });
     }
 
-    private File getCurrentProfileDirectory() {
-        String currentProfile = LauncherPreferences.DEFAULT_PREF.getString(LauncherPreferences.PREF_KEY_CURRENT_PROFILE, null);
-        if(!Tools.isValidString(currentProfile)) return new File(Tools.DIR_GAME_NEW);
-        LauncherProfiles.load();
-        MinecraftProfile profileObject = LauncherProfiles.mainProfileJson.profiles.get(currentProfile);
-        if(profileObject == null) return new File(Tools.DIR_GAME_NEW);
-        return Tools.getGameDirPath(profileObject);
+    private void openGameDataPicker() {
+        if (GameDataUtils.hasStorageAccess(requireContext())) {
+            GameDataPicker.show(requireActivity());
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= 30) {
+            new AlertDialog.Builder(requireContext())
+                    .setTitle(R.string.game_home_permission_title)
+                    .setMessage(R.string.game_home_permission_message)
+                    .setPositiveButton(android.R.string.ok, (dialog, which) ->
+                            GameDataUtils.openAllFilesAccessSettings(requireActivity()))
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show();
+        } else if (Build.VERSION.SDK_INT >= 23) {
+            requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    Manifest.permission.READ_EXTERNAL_STORAGE}, REQUEST_STORAGE_PERMISSION);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode != REQUEST_STORAGE_PERMISSION) return;
+        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            GameDataPicker.show(requireActivity());
+        } else {
+            Toast.makeText(requireContext(), R.string.toast_permission_denied, Toast.LENGTH_LONG).show();
+        }
     }
 
     @Override

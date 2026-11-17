@@ -16,10 +16,14 @@ import java.util.UUID;
 
 public class LauncherProfiles {
     public static MinecraftLauncherProfiles mainProfileJson;
-    private static final File launcherProfilesFile = new File(Tools.GAME_PROFILES_FILE);
+
+    private static File getLauncherProfilesFile() {
+        return new File(Tools.GAME_PROFILES_FILE);
+    }
 
     /** Reload the profile from the file, creating a default one if necessary */
     public static void load(){
+        File launcherProfilesFile = getLauncherProfilesFile();
         if (launcherProfilesFile.exists()) {
             try {
                 mainProfileJson = Tools.GLOBAL_GSON.fromJson(Tools.read(launcherProfilesFile.getAbsolutePath()), MinecraftLauncherProfiles.class);
@@ -45,7 +49,7 @@ public class LauncherProfiles {
     /** Apply the current configuration into a file */
     public static void write() {
         try {
-            Tools.write(launcherProfilesFile.getAbsolutePath(), mainProfileJson.toJson());
+            Tools.write(getLauncherProfilesFile().getAbsolutePath(), mainProfileJson.toJson());
         } catch (IOException e) {
             Log.e(LauncherProfiles.class.toString(), "Failed to write profile file", e);
             throw new RuntimeException(e);

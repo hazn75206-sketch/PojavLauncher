@@ -47,8 +47,6 @@ public class FolderProvider extends DocumentsProvider {
 
     private static final String ALL_MIME_TYPES = "*/*";
 
-    private File BASE_DIR;
-
     private ContentResolver mContentResolver;
 
     private String mStorageProviderAuthortiy;
@@ -87,14 +85,15 @@ public class FolderProvider extends DocumentsProvider {
             summary = "(" + getContext().getString(R.string.generic_debug) + ") " + summary;
         }
 
+        final File baseDir = new File(Tools.DIR_GAME_HOME);
         final MatrixCursor.RowBuilder row = result.newRow();
-        row.add(Root.COLUMN_ROOT_ID, getDocIdForFile(BASE_DIR));
-        row.add(Root.COLUMN_DOCUMENT_ID, getDocIdForFile(BASE_DIR));
+        row.add(Root.COLUMN_ROOT_ID, getDocIdForFile(baseDir));
+        row.add(Root.COLUMN_DOCUMENT_ID, getDocIdForFile(baseDir));
         row.add(Root.COLUMN_SUMMARY, summary);
         row.add(Root.COLUMN_FLAGS, Root.FLAG_SUPPORTS_CREATE | Root.FLAG_SUPPORTS_SEARCH | Root.FLAG_SUPPORTS_IS_CHILD);
         row.add(Root.COLUMN_TITLE, applicationName);
         row.add(Root.COLUMN_MIME_TYPES, ALL_MIME_TYPES);
-        row.add(Root.COLUMN_AVAILABLE_BYTES, BASE_DIR.getFreeSpace());
+        row.add(Root.COLUMN_AVAILABLE_BYTES, baseDir.getFreeSpace());
         row.add(Root.COLUMN_ICON, R.mipmap.ic_launcher);
         return result;
     }
@@ -143,7 +142,6 @@ public class FolderProvider extends DocumentsProvider {
         }else {
             return false;
         }
-        BASE_DIR = new File(Tools.DIR_GAME_HOME);
         mContentResolver = getContext().getContentResolver();
         mStorageProviderAuthortiy = getContext().getString(R.string.storageProviderAuthorities);
         return true;
@@ -346,7 +344,7 @@ public class FolderProvider extends DocumentsProvider {
     @Override
     @TargetApi(26)
     public DocumentsContract.Path findDocumentPath(@Nullable String parentDocumentId, String childDocumentId) throws FileNotFoundException {
-        File source = BASE_DIR;
+        File source = new File(Tools.DIR_GAME_HOME);
         if(parentDocumentId != null) source = getFileForDocId(parentDocumentId);
         File destination = getFileForDocId(childDocumentId);
         List<String> pathIds = new ArrayList<>();

@@ -144,15 +144,37 @@ public final class Tools {
         }
     }
 
+    public static File getDefaultStorageRoot(Context ctx) {
+        return getPojavStorageRoot(ctx);
+    }
+
+    /**
+     * Returns the user-selected storage root, or the default one if no valid custom
+     * directory is configured.
+     */
+    public static File getStorageRoot(Context ctx) {
+        if (LauncherPreferences.DEFAULT_PREF != null) {
+            String customRoot = LauncherPreferences.DEFAULT_PREF.getString(
+                    LauncherPreferences.PREF_KEY_GAME_HOME, null);
+            if (customRoot != null && !customRoot.isEmpty()) {
+                File customDir = new File(customRoot);
+                if (customDir.isDirectory() && customDir.canWrite()) return customDir;
+            }
+        }
+        return getPojavStorageRoot(ctx);
+    }
+
     /**
      * Checks if the Pojav's storage root is accessible and read-writable
      * @param context context to get the storage root if it's not set yet
      * @return true if storage is fine, false if storage is not accessible
      */
     public static boolean checkStorageRoot(Context context) {
-        File externalFilesDir = DIR_GAME_HOME  == null ? Tools.getPojavStorageRoot(context) : new File(DIR_GAME_HOME);
-        //externalFilesDir == null when the storage is not mounted if it was obtained with the context call
-        return externalFilesDir != null && Environment.getExternalStorageState(externalFilesDir).equals(Environment.MEDIA_MOUNTED);
+        File storageRoot = getStorageRoot(context);
+        //storageRoot == null when the storage is not mounted if it was obtained with the context call
+        if (storageRoot == null) return false;
+        if (!FileUtils.ensureDirectorySilently(storageRoot)) return false;
+        return Environment.getExternalStorageState(storageRoot).equals(Environment.MEDIA_MOUNTED);
     }
 
     /**
@@ -192,7 +214,9 @@ public final class Tools {
      */
     public static void initStorageConstants(Context ctx){
         initEarlyConstants(ctx);
-        DIR_GAME_HOME = getPojavStorageRoot(ctx).getAbsolutePath();
+        File storageRoot = getStorageRoot(ctx);
+        if (storageRoot == null) throw new IllegalStateException("Storage root is unavailable");
+        DIR_GAME_HOME = storageRoot.getAbsolutePath();
         DIR_GAME_NEW = DIR_GAME_HOME + "/.minecraft";
         DIR_HOME_VERSION = DIR_GAME_NEW + "/versions";
         DIR_HOME_LIBRARY = DIR_GAME_NEW + "/libraries";
@@ -1028,6 +1052,16 @@ public final class Tools {
 
     public static void fullyExit() {
         android.os.Process.killProcess(android.os.Process.myPid());
+    }
+
+    /**
+     * Restarts the launcher so changes to the storage root take effect.
+     * TestStorageActivity reloads the storage constants before showing the launcher.
+     */
+    public static void restartLauncher(Context context) {
+        Intent intent = new Intent(context, TestStorageActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        context.startActivity(intent);
     }
 
     public static void printLauncherInfo(String gameVersion, String javaArguments) {

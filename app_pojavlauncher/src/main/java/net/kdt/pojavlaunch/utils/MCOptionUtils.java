@@ -39,6 +39,16 @@ public class MCOptionUtils {
                 : sOptionFolderPath);
     }
 
+    /** Forget the cached options so the next load() uses the current game directory. */
+    public static void reset() {
+        if (sFileObserver != null) {
+            sFileObserver.stopWatching();
+            sFileObserver = null;
+        }
+        sOptionFolderPath = null;
+        sParameterMap.clear();
+    }
+
     public static void load(@NonNull String folderPath) {
         File optionFile = new File(folderPath + "/options.txt");
         if(!optionFile.exists()) {

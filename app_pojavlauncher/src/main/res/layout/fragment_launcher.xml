@@ -81,7 +81,7 @@
 				style="@style/LauncherMenuButton.Universal"
 				android:layout_width="match_parent"
 				android:drawableStart="@drawable/ic_folder"
-				android:text="@string/mcl_button_open_directory"
+				android:text="@string/mcl_button_data_directory"
 				app:layout_constraintTop_toBottomOf="@id/share_logs_button" />
 		</androidx.constraintlayout.widget.ConstraintLayout>
 	</ScrollView>

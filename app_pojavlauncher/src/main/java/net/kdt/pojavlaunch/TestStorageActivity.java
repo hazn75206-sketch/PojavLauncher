@@ -16,13 +16,15 @@ import androidx.core.content.ContextCompat;
 
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 import net.kdt.pojavlaunch.tasks.AsyncAssetManager;
+import net.kdt.pojavlaunch.utils.MCOptionUtils;
+import net.kdt.pojavlaunch.value.launcherprofiles.LauncherProfiles;
 
 public class TestStorageActivity extends Activity {
     private final int REQUEST_STORAGE_REQUEST_CODE = 1;
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if(Build.VERSION.SDK_INT >= 23 && Build.VERSION.SDK_INT < 29 && !isStorageAllowed(this)) requestStoragePermission();
+        if(Build.VERSION.SDK_INT >= 23 && Build.VERSION.SDK_INT < 30 && !isStorageAllowed(this)) requestStoragePermission();
         else exit();
     }
 
@@ -63,6 +65,8 @@ public class TestStorageActivity extends Activity {
         }
         //Initialize constants (implicitly) and preferences after we confirm that we have storage.
         LauncherPreferences.loadPreferences(this);
+        LauncherProfiles.mainProfileJson = null;
+        MCOptionUtils.reset();
         AsyncAssetManager.unpackComponents(this);
         AsyncAssetManager.unpackSingleFiles(this);
 
