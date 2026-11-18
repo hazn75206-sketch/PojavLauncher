@@ -394,9 +394,11 @@
     <string name="game_home_same">Ini sudah folder data yang sedang dipakai</string>
     <string name="game_home_nested">Pilih folder yang tidak berada di dalam folder data saat ini</string>
     <string name="game_home_select_parent">Pilih folder yang berisi .minecraft, bukan folder .minecraft itu sendiri</string>
+    <string name="game_home_resolved">Menggunakan %1$s</string>
+    <string name="game_home_missing_minecraft">Folder ini tidak berisi .minecraft. Pilih folder yang berisi .minecraft, misalnya folder \'files\'.</string>
     <string name="game_home_use_folder">Pakai folder ini</string>
-    <string name="game_home_not_empty_title">Folder tidak kosong</string>
-    <string name="game_home_not_empty_message">Folder ini sudah berisi file. Tetap pakai? File yang ada tidak akan disalin atau dihapus.</string>
+    <string name="game_home_not_empty_title">Data Minecraft ditemukan</string>
+    <string name="game_home_not_empty_message">Folder ini sudah berisi data Minecraft. Pakai sebagai folder data game? File yang ada tidak akan disalin atau dihapus.</string>
     <string name="game_home_copy_title">Salin data yang ada?</string>
     <string name="game_home_copy_message">Salin data Minecraft yang ada (versi, aset, dunia, dan mod) ke folder baru? Data lama tetap dibiarkan.</string>
     <string name="game_home_copy_start">Salin dan mulai ulang</string>

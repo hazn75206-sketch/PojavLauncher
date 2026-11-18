@@ -149,6 +149,51 @@ public final class Tools {
     }
 
     /**
+     * Resolves a folder selected by the user to the folder that actually contains
+     * the .minecraft directory. This handles two common mistakes: selecting the
+     * .minecraft folder itself, and selecting a copied app data folder where the
+     * real data lives in its "files" subfolder.
+     */
+    public static File resolveGameHome(Context ctx, File selected) {
+        if (selected == null) return null;
+        if (".minecraft".equals(selected.getName())) {
+            File parent = selected.getParentFile();
+            if (parent != null) selected = parent;
+        }
+
+        // Actual app-specific external files folder.
+        File externalRoot = null;
+        try {
+            externalRoot = ctx.getExternalFilesDir(null);
+        } catch (Throwable ignored) {}
+        if (externalRoot != null) {
+            File packageRoot = externalRoot.getParentFile();
+            if (packageRoot != null && isSameFile(selected, packageRoot)
+                    && new File(externalRoot, ".minecraft").exists()) {
+                return externalRoot;
+            }
+        }
+
+        // Copied app data folders are usually named after the package and keep
+        // the real game data in their "files" subfolder.
+        File nestedRoot = new File(selected, "files");
+        if (new File(nestedRoot, ".minecraft").exists()) {
+            if (selected.getName().equals(ctx.getPackageName())) return nestedRoot;
+            if (!new File(selected, ".minecraft").exists()) return nestedRoot;
+        }
+
+        return selected;
+    }
+
+    private static boolean isSameFile(File first, File second) {
+        try {
+            return first.getCanonicalPath().equals(second.getCanonicalPath());
+        } catch (IOException e) {
+            return first.getAbsolutePath().equals(second.getAbsolutePath());
+        }
+    }
+
+    /**
      * Returns the user-selected storage root, or the default one if no valid custom
      * directory is configured.
      */
@@ -158,7 +203,12 @@ public final class Tools {
                     LauncherPreferences.PREF_KEY_GAME_HOME, null);
             if (customRoot != null && !customRoot.isEmpty()) {
                 File customDir = new File(customRoot);
-                if (customDir.isDirectory() && customDir.canWrite()) return customDir;
+                if (customDir.isDirectory() && customDir.canWrite()) {
+                    File resolved = resolveGameHome(ctx, customDir);
+                    if (resolved != null && resolved.isDirectory() && resolved.canWrite()) {
+                        return resolved;
+                    }
+                }
             }
         }
         return getPojavStorageRoot(ctx);

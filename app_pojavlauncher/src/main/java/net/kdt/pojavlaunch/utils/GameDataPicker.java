@@ -62,14 +62,6 @@ public final class GameDataPicker {
             dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(v -> {
                 File selected = fileListView.getFullPath();
                 if (selected == null) return;
-                if (selected.getName().equals(".minecraft")) {
-                    Toast.makeText(activity, R.string.game_home_select_parent, Toast.LENGTH_LONG).show();
-                    return;
-                }
-                if (!FileUtils.ensureDirectorySilently(selected)) {
-                    Toast.makeText(activity, R.string.game_home_invalid, Toast.LENGTH_LONG).show();
-                    return;
-                }
                 dialog.dismiss();
                 applyGameHome(activity, selected, false);
             });
@@ -86,19 +78,28 @@ public final class GameDataPicker {
         dialog.show();
     }
 
-    private static void applyGameHome(Activity activity, File newRoot, boolean useDefault) {
+    private static void applyGameHome(Activity activity, File selected, boolean useDefault) {
         if (activity == null || activity.isFinishing() || activity.isDestroyed()) return;
-        if (newRoot.getName().equals(".minecraft")) {
-            Toast.makeText(activity, R.string.game_home_select_parent, Toast.LENGTH_LONG).show();
-            return;
+        File newRoot = Tools.resolveGameHome(activity, selected);
+        if (newRoot == null) return;
+        if (!isSamePath(selected, newRoot)) {
+            Toast.makeText(activity,
+                    activity.getString(R.string.game_home_resolved, newRoot.getAbsolutePath()),
+                    Toast.LENGTH_LONG).show();
         }
         File oldRoot = new File(Tools.DIR_GAME_HOME);
         if (isSamePath(oldRoot, newRoot)) {
             Toast.makeText(activity, R.string.game_home_same, Toast.LENGTH_SHORT).show();
             return;
         }
-        if (GameDataUtils.isSameOrInside(oldRoot, newRoot)
-                || GameDataUtils.isSameOrInside(newRoot, oldRoot)) {
+        File defaultRoot = Tools.getDefaultStorageRoot(activity);
+        boolean newIsDefault = defaultRoot != null && isSamePath(newRoot, defaultRoot);
+        boolean isChildWithGameData = newRoot.getParentFile() != null
+                && isSamePath(oldRoot, newRoot.getParentFile())
+                && new File(newRoot, ".minecraft").isDirectory();
+        if (!newIsDefault && !isChildWithGameData
+                && (GameDataUtils.isSameOrInside(oldRoot, newRoot)
+                || GameDataUtils.isSameOrInside(newRoot, oldRoot))) {
             Toast.makeText(activity, R.string.game_home_nested, Toast.LENGTH_LONG).show();
             return;
         }
@@ -107,7 +108,8 @@ public final class GameDataPicker {
             return;
         }
 
-        if (new File(newRoot, ".minecraft").exists() || !GameDataUtils.isDirectoryEmpty(newRoot)) {
+        File minecraftDir = new File(newRoot, ".minecraft");
+        if (minecraftDir.isDirectory()) {
             new AlertDialog.Builder(activity)
                     .setTitle(R.string.game_home_not_empty_title)
                     .setMessage(R.string.game_home_not_empty_message)
@@ -115,6 +117,11 @@ public final class GameDataPicker {
                             (dialog, which) -> commitGameHome(activity, newRoot, useDefault))
                     .setNegativeButton(android.R.string.cancel, null)
                     .show();
+            return;
+        }
+
+        if (!GameDataUtils.isDirectoryEmpty(newRoot)) {
+            Toast.makeText(activity, R.string.game_home_missing_minecraft, Toast.LENGTH_LONG).show();
             return;
         }
 
@@ -130,7 +137,7 @@ public final class GameDataPicker {
     }
 
     private static void commitGameHome(Activity activity, File newRoot, boolean useDefault) {
-        saveGameHome(newRoot, useDefault);
+        saveGameHome(activity.getApplicationContext(), newRoot, useDefault);
         Toast.makeText(activity, R.string.game_home_restarting, Toast.LENGTH_SHORT).show();
         Tools.restartLauncher(activity.getApplicationContext());
     }
@@ -152,7 +159,7 @@ public final class GameDataPicker {
                 GameDataUtils.copyGameData(oldRoot, newRoot, null);
                 Tools.MAIN_HANDLER.post(() -> {
                     if (progress.isShowing()) progress.dismiss();
-                    saveGameHome(newRoot, useDefault);
+                    saveGameHome(appContext, newRoot, useDefault);
                     Toast.makeText(appContext, R.string.game_home_restarting, Toast.LENGTH_SHORT).show();
                     Tools.restartLauncher(appContext);
                 });
@@ -167,23 +174,27 @@ public final class GameDataPicker {
         });
     }
 
-    private static void saveGameHome(File newRoot, boolean useDefault) {
+    private static void saveGameHome(Context context, File newRoot, boolean useDefault) {
         if (LauncherPreferences.DEFAULT_PREF == null) return;
+        File resolvedRoot = Tools.resolveGameHome(context, newRoot);
+        if (resolvedRoot == null) resolvedRoot = newRoot;
         SharedPreferences.Editor editor = LauncherPreferences.DEFAULT_PREF.edit();
         if (useDefault) {
             editor.remove(LauncherPreferences.PREF_KEY_GAME_HOME);
         } else {
-            editor.putString(LauncherPreferences.PREF_KEY_GAME_HOME, newRoot.getAbsolutePath());
+            editor.putString(LauncherPreferences.PREF_KEY_GAME_HOME,
+                    resolvedRoot.getAbsolutePath());
         }
         String defaultCtrl = LauncherPreferences.DEFAULT_PREF.getString("defaultCtrl", null);
-        if (defaultCtrl != null) {
-            try {
-                String oldPath = new File(Tools.DIR_GAME_HOME).getCanonicalPath();
-                String newPath = newRoot.getCanonicalPath();
-                if (defaultCtrl.startsWith(oldPath + File.separator)) {
-                    editor.putString("defaultCtrl", defaultCtrl.replace(oldPath, newPath));
-                }
-            } catch (IOException ignored) {}
+        if (defaultCtrl != null && !defaultCtrl.isEmpty()) {
+            String ctrlName = new File(defaultCtrl).getName();
+            File newCtrl = new File(resolvedRoot, "controlmap/" + ctrlName);
+            if (newCtrl.isFile()) {
+                editor.putString("defaultCtrl", newCtrl.getAbsolutePath());
+            } else {
+                File fallbackCtrl = new File(resolvedRoot, "controlmap/default.json");
+                editor.putString("defaultCtrl", fallbackCtrl.getAbsolutePath());
+            }
         }
         editor.commit();
     }

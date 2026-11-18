@@ -444,9 +444,11 @@
     <string name="game_home_same">This is already the current data folder</string>
     <string name="game_home_nested">Choose a folder that is not inside the current data folder</string>
     <string name="game_home_select_parent">Select the folder that contains .minecraft, not the .minecraft folder itself</string>
+    <string name="game_home_resolved">Using %1$s</string>
+    <string name="game_home_missing_minecraft">This folder doesn\'t contain .minecraft. Select the folder that contains .minecraft, for example the \'files\' folder.</string>
     <string name="game_home_use_folder">Use this folder</string>
-    <string name="game_home_not_empty_title">Folder is not empty</string>
-    <string name="game_home_not_empty_message">This folder already contains files. Use it anyway? Existing files will not be copied or removed.</string>
+    <string name="game_home_not_empty_title">Minecraft data found</string>
+    <string name="game_home_not_empty_message">This folder already contains Minecraft data. Use it as the game data folder? Existing files will not be copied or removed.</string>
     <string name="game_home_copy_title">Copy existing data?</string>
     <string name="game_home_copy_message">Copy your existing Minecraft data (versions, assets, worlds and mods) to the new folder? The old data will remain in place.</string>
     <string name="game_home_copy_start">Copy and restart</string>

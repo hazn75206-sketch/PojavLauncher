@@ -15,8 +15,10 @@ import android.util.Log;
 
 import net.kdt.pojavlaunch.*;
 import net.kdt.pojavlaunch.multirt.MultiRTUtils;
+import net.kdt.pojavlaunch.utils.GameDataUtils;
 import net.kdt.pojavlaunch.utils.JREUtils;
 
+import java.io.File;
 import java.io.IOException;
 
 public class LauncherPreferences {
@@ -70,9 +72,51 @@ public class LauncherPreferences {
     public static boolean PREF_VSYNC_IN_ZINK = true;
 
 
+    /**
+     * Stores the resolved game home so the preference always points at the folder
+     * that actually contains .minecraft, even if the user picked a copied app data
+     * folder or selected .minecraft itself.
+     */
+    private static void migrateGameHome() {
+        if (DEFAULT_PREF == null) return;
+        String savedGameHome = DEFAULT_PREF.getString(PREF_KEY_GAME_HOME, null);
+        if (savedGameHome != null && !savedGameHome.equals(Tools.DIR_GAME_HOME)) {
+            DEFAULT_PREF.edit().putString(PREF_KEY_GAME_HOME, Tools.DIR_GAME_HOME).apply();
+        }
+    }
+
+    /**
+     * Keeps the default control layout inside the active game data folder. Stale
+     * absolute paths are mapped to the same file name in the new folder, then to
+     * the new folder's default control layout.
+     */
+    private static String resolveDefaultCtrl() {
+        String storedCtrl = DEFAULT_PREF == null ? null
+                : DEFAULT_PREF.getString("defaultCtrl", null);
+        String resolvedCtrl = storedCtrl;
+        if (resolvedCtrl == null || resolvedCtrl.isEmpty()) {
+            resolvedCtrl = Tools.CTRLDEF_FILE;
+        } else {
+            File ctrlFile = new File(resolvedCtrl);
+            File currentCandidate = new File(Tools.CTRLMAP_PATH, ctrlFile.getName());
+            if (!ctrlFile.isFile()) {
+                resolvedCtrl = currentCandidate.isFile()
+                        ? currentCandidate.getAbsolutePath() : Tools.CTRLDEF_FILE;
+            } else if (!GameDataUtils.isSameOrInside(new File(Tools.CTRLMAP_PATH), ctrlFile)
+                    && currentCandidate.isFile()) {
+                resolvedCtrl = currentCandidate.getAbsolutePath();
+            }
+        }
+        if (DEFAULT_PREF != null && !resolvedCtrl.equals(storedCtrl)) {
+            DEFAULT_PREF.edit().putString("defaultCtrl", resolvedCtrl).apply();
+        }
+        return resolvedCtrl;
+    }
+
     public static void loadPreferences(Context ctx) {
         //Required for CTRLDEF_FILE and MultiRT
         Tools.initStorageConstants(ctx);
+        migrateGameHome();
         boolean isDevicePowerful = isDevicePowerful(ctx);
 
         PREF_RENDERER = DEFAULT_PREF.getString("renderer", "opengles2");
@@ -81,7 +125,7 @@ public class LauncherPreferences {
         PREF_MOUSESPEED = ((float)DEFAULT_PREF.getInt("mousespeed",100))/100f;
         PREF_IGNORE_NOTCH = DEFAULT_PREF.getBoolean("ignoreNotch", false);
 		PREF_LONGPRESS_TRIGGER = DEFAULT_PREF.getInt("timeLongPressTrigger", 300);
-		PREF_DEFAULTCTRL_PATH = DEFAULT_PREF.getString("defaultCtrl", Tools.CTRLDEF_FILE);
+		PREF_DEFAULTCTRL_PATH = resolveDefaultCtrl();
         PREF_FORCE_ENGLISH = DEFAULT_PREF.getBoolean("force_english", false);
         PREF_CHECK_LIBRARY_SHA = DEFAULT_PREF.getBoolean("checkLibraries",true);
         PREF_DISABLE_GESTURES = DEFAULT_PREF.getBoolean("disableGestures",false);
