@@ -279,16 +279,10 @@ public class MinecraftDownloader {
                                   long size, boolean skipIfFailed) throws IOException {
         FileUtils.ensureParentDirectory(targetFile);
         mTotalFileCount++;
-        // Only attempt to check size if we still use the size counter and didn't switch to file counter.
-        if(size <= 0 && !mUseFileCounter) {
-            size = DownloadMirror.getContentLengthMirrored(downloadClass, url);
-        }
-        if(size < 0) {
-            // If we were unable to get the content length ourselves, we automatically fall back
-            // to tracking the progress using the file counter.
+        if(size <= 0) {
             size = 0;
             mUseFileCounter = true;
-            Log.i("MinecraftDownloader", "Failed to determine size of "+targetFile.getName()+", switching to file counter");
+            Log.i("MinecraftDownloader", "Unknown size of "+targetFile.getName()+", switching to file counter");
         }else {
             mTotalSize += size;
         }
@@ -481,6 +475,11 @@ public class MinecraftDownloader {
         }
 
         private void runCatching() throws Exception {
+            if(!Tools.isValidString(mTargetSha1)
+                    && mTargetPath.isFile() && mTargetPath.canRead() && mTargetPath.length() > 0) {
+                finishWithoutDownloading();
+                return;
+            }
             if(mDownloadClass == DownloadMirror.DOWNLOAD_CLASS_LIBRARIES && !Tools.isValidString(mTargetSha1)) {
                 // If we're downloading a library, try to get sha1 since it might be available as a file
                 tryGetLibrarySha1();
